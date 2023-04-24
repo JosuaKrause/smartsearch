@@ -1,0 +1,26 @@
+# testing
+/test-results/
+/coverage/reports/
+.coverage
+
+# production
+/build
+/.mypy_cache
+
+# misc
+.DS_Store
+*.pq
+*.png
+*.sql
+*.pkl
+*.zip
+*.json
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.vscode
+.cmd_history
+
+**/.ipynb_checkpoints
+__pycache__
