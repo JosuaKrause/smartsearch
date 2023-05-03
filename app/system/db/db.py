@@ -2,6 +2,7 @@ import contextlib
 import inspect
 import sys
 import threading
+import urllib
 from typing import Any, Iterator, Type, TYPE_CHECKING, TypedDict
 
 import sqlalchemy as sa
@@ -58,8 +59,8 @@ def get_engine(config: DBConfig) -> sa.engine.Engine:
             print(
                 "dialects other than 'postgresql' are not supported. "
                 "continue at your own risk", file=sys.stderr)
-        user = config["user"]
-        passwd = config["passwd"]
+        user = urllib.parse.quote_plus(config["user"])
+        passwd = urllib.parse.quote_plus(config["passwd"])
         host = config["host"]
         port = config["port"]
         dbname = config["dbname"]
