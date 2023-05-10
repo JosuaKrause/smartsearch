@@ -17,6 +17,7 @@ if [ ${MAJOR} -eq 3 ] && [ ${MINOR} -lt 10 ] || [ ${MAJOR} -lt 3 ]; then
 fi
 
 ${PYTHON} -m pip install --progress-bar off --upgrade -r requirements.txt
+${PYTHON} -m spacy download en_core_web_sm
 
 if python -c 'import torch;assert torch.__version__.startswith("2.0.")' &>/dev/null 2>&1; then
     PYTORCH=$(python -c 'import torch;print(torch.__version__)')

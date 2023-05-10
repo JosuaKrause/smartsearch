@@ -4,6 +4,7 @@ fastcluster==1.2.6
 flake8-commas==2.1.0
 flake8-isort==5.0.0
 flake8==5.0.4
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.2.0/en_core_web_sm-2.2.0.tar.gz
 huggingface-hub==0.11.1
 ipywidgets==8.0.3
 jupyter-console==6.4.4
@@ -30,6 +31,8 @@ quick-server==0.7.15
 scikit-learn==1.2.0
 scipy==1.9.3
 seaborn==0.12.2
+spacy-language-detection==0.2.1
+spacy==3.5.2
 SQLAlchemy==2.0.9
 SQLAlchemy[mypy]==2.0.9
 tokenizers==0.13.2
