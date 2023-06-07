@@ -1,3 +1,5 @@
+cd -- "$( dirname -- "${BASH_SOURCE[0]}" )/../" &> /dev/null
+
 find . -type d \( \
         -path './venv' -o \
         -path './data' -o \

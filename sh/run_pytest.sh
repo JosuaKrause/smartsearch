@@ -2,6 +2,8 @@
 
 set -ex
 
+cd -- "$( dirname -- "${BASH_SOURCE[0]}" )/../" &> /dev/null
+
 PYTHON="${PYTHON:-python3}"
 RESULT_FNAME="${RESULT_FNAME:-results.xml}"
 IFS=',' read -a FILE_INFO <<< "$1"

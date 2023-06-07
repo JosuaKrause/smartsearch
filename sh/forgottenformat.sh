@@ -2,6 +2,8 @@
 
 set -ex
 
+cd -- "$( dirname -- "${BASH_SOURCE[0]}" )/../" &> /dev/null
+
 PYTHON="${PYTHON:-python3}"
 
 ANY_DOUBLE="([^\\\\\"]|\\\\\")*"
@@ -40,7 +42,7 @@ while True:
         stdout.flush()
 EOF
 
-./findpy.sh \
+./sh/findpy.sh \
     | xargs grep -nE "['\"]" \
     | ${PYTHON} -c "${PY_FILTER}" \
     | grep -E "${REGEX}" \
