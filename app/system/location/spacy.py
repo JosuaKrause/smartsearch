@@ -27,4 +27,4 @@ def get_locations(
     for ent in doc.ents:
         if ent.label_ not in ["LOC", "GPE"]:
             continue
-        yield (ent.text, ent.start, ent.end)
+        yield (ent.text, ent.start_char, ent.end_char)
