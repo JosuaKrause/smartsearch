@@ -67,6 +67,7 @@ class LocationCache(Base):  # pylint: disable=too-few-public-methods
         sa.Integer,
         nullable=False,
         server_default=sa.text("1"))
+    no_cache = sa.Column(sa.Boolean, nullable=False)
 
 
 class LocationEntries(Base):  # pylint: disable=too-few-public-methods
@@ -81,9 +82,11 @@ class LocationEntries(Base):  # pylint: disable=too-few-public-methods
         nullable=False,
         primary_key=True)
     pos = sa.Column(sa.Integer, nullable=False, primary_key=True)
-    lat = sa.Column(sa.Double, nullable=False)
-    lng = sa.Column(sa.Double, nullable=False)
-    normalized = sa.Column(sa.Text(), nullable=False)
+    lat: sa.Column[float] = sa.Column(  # type: ignore
+        sa.Double, nullable=False)
+    lng: sa.Column[float] = sa.Column(  # type: ignore
+        sa.Double, nullable=False)
+    formatted = sa.Column(sa.Text(), nullable=False)
     country = sa.Column(sa.String(COUNTRY_MAX_LEN), nullable=False)
 
 

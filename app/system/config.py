@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 Config = TypedDict('Config', {
     "db": 'DBConfig',
+    "opencage": str,
 })
 
 
@@ -39,6 +40,7 @@ def config_template() -> Config:
     }
     return {
         "db": default_conn.copy(),
+        "opencage": "INVALID",
     }
 
 

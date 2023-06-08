@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS public.location_cache
     query TEXT COLLATE pg_catalog."default" UNIQUE NOT NULL PRIMARY KEY,
     id SERIAL UNIQUE NOT NULL,
     access_last TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    access_count INTEGER NOT NULL DEFAULT 1
+    access_count INTEGER NOT NULL DEFAULT 1,
+    no_cache BOOLEAN NOT NULL,
 );
 CREATE TABLE IF NOT EXISTS public.location_entries
 (
