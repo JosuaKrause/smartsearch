@@ -9,6 +9,9 @@ from quick_server import ReqArgs
 from app.api.response_types import SourceListResponse, SourceResponse
 from app.misc.env import envload_int, envload_str
 from app.system.config import get_config
+from app.system.db.db import DBConnector
+from app.system.location.pipeline import extract_locations
+from app.system.location.response import GeoOutput, GeoQuery
 from app.system.ops.ops import get_ops
 
 
@@ -51,7 +54,9 @@ def setup(
 
     server.set_default_token_expiration(48 * 60 * 60)  # 2 days
 
-    ops = get_ops("db", get_config())
+    config = get_config()
+    db = DBConnector(config["db"])
+    ops = get_ops("db", config)
 
     # *** sources ***
 
@@ -69,6 +74,20 @@ def setup(
         return {
             "sources": ops.get_sources(),
         }
+
+    # *** location ***
+
+    @server.json_post(f"{prefix}/locations")
+    def _post_locations(_req: QSRH, rargs: ReqArgs) -> GeoOutput:
+        args = rargs["post"]
+        obj: GeoQuery = {
+            "input": args["input"],
+            "return_input": args.get("return_input", False),
+            "return_context": args.get("return_context", True),
+            "strategy": args.get("strategy", "frequency"),
+            "language": args.get("language", "en"),
+        }
+        return extract_locations(db, obj)
 
     return server, prefix
 
