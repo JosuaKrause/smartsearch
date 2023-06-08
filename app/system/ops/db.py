@@ -5,6 +5,7 @@ from typing import Callable, Sequence
 import numpy as np
 import sqlalchemy as sa
 import torch
+from sqlalchemy.orm import InstrumentedAttribute
 
 from app.misc.util import safe_ravel
 from app.system.config import Config
@@ -177,8 +178,7 @@ class DbOps(Ops):
         model_id = self._get_models().get(model)
         if model_id is None:
             raise ValueError(f"unknown model: {model}")
-        actions: dict[
-                FeedbackAction, sa.orm.InstrumentedAttribute[int | None]] = {
+        actions: dict[FeedbackAction, InstrumentedAttribute[int | None]] = {
             FB_APPROVE: FeedbackTable.approve,
             FB_DISLIKE: FeedbackTable.dislike,
             FB_NEUTRAL: FeedbackTable.neutral,

@@ -7,6 +7,7 @@ from typing import Any, Iterator, Type, TYPE_CHECKING, TypedDict
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.orm import Session
 
 
 if TYPE_CHECKING:
@@ -120,9 +121,9 @@ class DBConnector:
             yield conn
 
     @contextlib.contextmanager
-    def get_session(self, autocommit: bool = True) -> Iterator[sa.orm.Session]:
+    def get_session(self, autocommit: bool = True) -> Iterator[Session]:
         success = False
-        with sa.orm.Session(self._engine) as session:
+        with Session(self._engine) as session:
             try:
                 yield session
                 success = True
