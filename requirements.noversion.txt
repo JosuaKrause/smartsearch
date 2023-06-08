@@ -1,10 +1,10 @@
 annoy
+backoff
 evaluate
 fastcluster
 flake8
 flake8-commas
 flake8-isort
-https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.2.0/en_core_web_sm-2.2.0.tar.gz
 huggingface-hub
 ipywidgets
 jupyter
@@ -16,6 +16,7 @@ matplotlib-inline
 mypy
 mypy-extensions
 numpy
+opencage
 pandas
 Pillow
 pre-commit
@@ -33,7 +34,6 @@ scipy
 seaborn
 spacy
 spacy-language-detection
-SQLAlchemy
 SQLAlchemy[mypy]
 tokenizers
 tqdm
