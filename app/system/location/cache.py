@@ -38,7 +38,7 @@ def read_geo_cache(db: DBConnector, queries: set[str]) -> dict[str, GeoResult]:
             LocationEntries.lng,
             LocationEntries.formatted,
             LocationEntries.country)
-        estmt.where(LocationEntries.location_id.query.in_(qids))
+        estmt.where(LocationEntries.location_id.in_(qids))
         for row in session.execute(estmt):
             row_id = int(row.location_id)
             pos = int(row.pos)
