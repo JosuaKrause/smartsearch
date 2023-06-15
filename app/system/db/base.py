@@ -12,6 +12,7 @@ CORPUS_NAME_MAX_LEN = 40
 MODELS_NAME_MAX_LEN = 40
 MODELS_BASE_MAX_LEN = 40
 REFERENCE_MAX_LEN = 40
+COUNTRY_MAX_LEN = 5
 
 
 def adapt_numpy_float64(numpy_float64: np.float64) -> AsIs:
@@ -38,6 +39,57 @@ class Base(
     metadata = mapper_registry.metadata
 
     __init__ = mapper_registry.constructor
+
+
+LOCATION_CACHE_ID_SEQ: sa.Sequence = sa.Sequence(
+    "location_cache_id_seq", start=1, increment=1)
+
+
+class LocationCache(Base):  # pylint: disable=too-few-public-methods
+    __tablename__ = "location_cache"
+
+    query = sa.Column(
+        sa.Text(),
+        primary_key=True,
+        nullable=False,
+        unique=True)
+    id = sa.Column(
+        sa.Integer,
+        LOCATION_CACHE_ID_SEQ,
+        nullable=False,
+        unique=True,
+        server_default=LOCATION_CACHE_ID_SEQ.next_value())
+    access_last = sa.Column(
+        sa.DateTime(timezone=True),
+        nullable=False,
+        server_default=sa.func.now())
+    access_count = sa.Column(
+        sa.Integer,
+        nullable=False,
+        server_default=sa.text("1"))
+    no_cache = sa.Column(sa.Boolean, nullable=False)
+
+
+class LocationEntries(Base):  # pylint: disable=too-few-public-methods
+    __tablename__ = "location_entries"
+
+    location_id = sa.Column(
+        sa.Integer,
+        sa.ForeignKey(
+            LocationCache.id,
+            onupdate="CASCADE",
+            ondelete="CASCADE"),
+        nullable=False,
+        primary_key=True)
+    pos = sa.Column(sa.Integer, nullable=False, primary_key=True)
+    lat: sa.Column[float] = sa.Column(  # type: ignore
+        sa.Double, nullable=False)
+    lng: sa.Column[float] = sa.Column(  # type: ignore
+        sa.Double, nullable=False)
+    formatted = sa.Column(sa.Text(), nullable=False)
+    country = sa.Column(sa.String(COUNTRY_MAX_LEN), nullable=False)
+    confidence: sa.Column[float] = sa.Column(  # type: ignore
+        sa.Double, nullable=False)
 
 
 class ModelsTable(Base):  # pylint: disable=too-few-public-methods

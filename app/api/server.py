@@ -2,13 +2,22 @@
 import sys
 import threading
 
-from quick_server import create_server, QuickServer
+from quick_server import create_server, PreventDefaultResponse, QuickServer
 from quick_server import QuickServerRequestHandler as QSRH
 from quick_server import ReqArgs
 
-from app.api.response_types import SourceListResponse, SourceResponse
+from app.api.response_types import (
+    SourceListResponse,
+    SourceResponse,
+    VersionResponse,
+)
 from app.misc.env import envload_int, envload_str
+from app.misc.version import get_version
 from app.system.config import get_config
+from app.system.db.db import DBConnector
+from app.system.jwt import is_valid_token
+from app.system.location.pipeline import extract_locations
+from app.system.location.response import GeoOutput, GeoQuery
 from app.system.ops.ops import get_ops
 
 
@@ -47,11 +56,34 @@ def setup(
     if deploy:
         server.no_command_loop = True
 
-    print(f"python version: {sys.version}")
+    py_version_detail = f"{sys.version}"
+    py_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+    version_name = get_version(return_hash=False)
+    version_hash = get_version(return_hash=True)
+    print(f"python version: {py_version_detail}")
+    print(f"app version: {version_name}")
+    print(f"app commit: {version_hash}")
 
     server.set_default_token_expiration(48 * 60 * 60)  # 2 days
 
-    ops = get_ops("db", get_config())
+    config = get_config()
+    db = DBConnector(config["db"])
+    ops = get_ops("db", config)
+
+    def verify_token(token: str) -> None:
+        if is_valid_token(config, token):
+            return
+        raise PreventDefaultResponse(401, "invalid token provided")
+
+    # *** misc ***
+
+    @server.json_get(f"{prefix}/version")
+    def _get_version(_req: QSRH, _rargs: ReqArgs) -> VersionResponse:
+        return {
+            "app_name": version_name,
+            "app_commit": version_hash,
+            "python": py_version,
+        }
 
     # *** sources ***
 
@@ -70,6 +102,21 @@ def setup(
             "sources": ops.get_sources(),
         }
 
+    # *** location ***
+
+    @server.json_post(f"{prefix}/locations")
+    def _post_locations(_req: QSRH, rargs: ReqArgs) -> GeoOutput:
+        args = rargs["post"]
+        verify_token(args["token"])
+        obj: GeoQuery = {
+            "input": args["input"],
+            "return_input": args.get("return_input", False),
+            "return_context": args.get("return_context", True),
+            "strategy": args.get("strategy", "top"),
+            "language": args.get("language", "en"),
+        }
+        return extract_locations(db, obj)
+
     return server, prefix
 
 
@@ -78,9 +125,9 @@ def setup_server(
         addr: str | None,
         port: int | None) -> tuple[QuickServer, str]:
     if addr is None:
-        addr = envload_str("API_SERVER_HOST", default="127.0.0.1")
+        addr = envload_str("HOST", default="127.0.0.1")
     if port is None:
-        port = envload_int("API_SERVER_PORT", default=8080)
+        port = envload_int("PORT", default=8080)
     return setup(addr, port, parallel=True, deploy=deploy)
 
 

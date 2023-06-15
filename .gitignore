@@ -6,6 +6,7 @@
 # production
 /build
 /.mypy_cache
+/version.txt
 
 # misc
 .DS_Store
@@ -21,6 +22,7 @@
 .env.production.local
 .vscode
 .cmd_history
+!init.sql
 
 **/.ipynb_checkpoints
 __pycache__

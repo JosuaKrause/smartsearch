@@ -1,5 +1,8 @@
 help:
 	@echo "The following make targets are available:"
+	@echo "build	build the docker image"
+	@echo "publish	deploys the next version with the current commit"
+	@echo "azlogin	log in to azure container storage"
 	@echo "install	install all python dependencies"
 	@echo "lint-comment	ensures fixme comments are grepable"
 	@echo "lint-emptyinit	main inits must be empty"
@@ -16,6 +19,11 @@ help:
 	@echo "lint-all	run all lints"
 	@echo "pre-commit 	sort python package imports using isort"
 	@echo "name	generate a unique permanent name for the current commit"
+	@echo "commit	print precise commit hash (with a * if the working copy is dirty)"
+	@echo "branch	print current branch and exit"
+	@echo "version-file	create the version file"
+	@echo "current-version	computes the current version"
+	@echo "next-version	computes the next version"
 	@echo "git-check	ensures no git visible files have been altered"
 	@echo "pytest	run all test with pytest (requires a running test redis server)"
 	@echo "requirements-check	check whether the env differs from the requirements file"
@@ -31,7 +39,7 @@ PYTHON=python3
 NS=default
 
 lint-comment:
-	! ./findpy.sh \
+	! ./sh/findpy.sh \
 	| xargs grep --color=always -nE \
 	  '#.*(todo|xxx|fixme|n[oO][tT][eE]:|Note:|nopep8\s*$$)|.\"^s%'
 
@@ -39,18 +47,18 @@ lint-emptyinit:
 	[ ! -s app/__init__.py ]
 
 lint-pyi:
-	./pyi.sh
+	./sh/pyi.sh
 
 lint-stringformat:
-	! ./findpy.sh \
+	! ./sh/findpy.sh \
 	| xargs grep --color=always -nE "%[^'\"]*\"\\s*%\\s*"
 
 lint-indent:
-	! ./findpy.sh \
+	! ./sh/findpy.sh \
 	| xargs grep --color=always -nE "^(\s{4})*\s{1,3}\S.*$$"
 
 lint-forgottenformat:
-	! PYTHON=$(PYTHON) ./forgottenformat.sh
+	! PYTHON=$(PYTHON) ./sh/forgottenformat.sh
 
 lint-requirements:
 	locale
@@ -58,17 +66,17 @@ lint-requirements:
 	sort -ufc requirements.txt
 
 lint-pycodestyle:
-	./findpy.sh | sort
-	./findpy.sh | sort | xargs pycodestyle --show-source
+	./sh/findpy.sh | sort
+	./sh/findpy.sh | sort | xargs pycodestyle --show-source
 
 lint-pycodestyle-debug:
-	./findpy.sh | sort
-	./findpy.sh \
+	./sh/findpy.sh | sort
+	./sh/findpy.sh \
 	| sort | xargs pycodestyle -v --show-source
 
 lint-pylint:
-	./findpy.sh | sort
-	./findpy.sh | sort | xargs pylint -j 6 -v
+	./sh/findpy.sh | sort
+	./sh/findpy.sh | sort | xargs pylint -j 6 -v
 
 lint-type-check:
 	mypy --exclude=^venv/ --config-file mypy.ini .
@@ -91,27 +99,54 @@ lint-all: \
 	lint-type-check \
 	lint-flake8
 
+build:
+	./sh/build.sh
+
+publish:
+	./sh/deploy.sh
+
+azlogin:
+	./sh/azlogin.sh
+
+dockerpush:
+	./sh/dockerpush.sh
+
 install:
-	PYTHON=$(PYTHON) ./install.sh
+	PYTHON=$(PYTHON) ./sh/install.sh
 
 requirements-check:
-	PYTHON=$(PYTHON) ./requirements_check.sh $(FILE)
+	PYTHON=$(PYTHON) ./sh/requirements_check.sh $(FILE)
 
 requirements-complete:
-	PYTHON=$(PYTHON) ./requirements_complete.sh $(FILE)
+	PYTHON=$(PYTHON) ./sh/requirements_complete.sh $(FILE)
 
 name:
 	git describe --abbrev=10 --tags HEAD
 
+commit:
+	git describe --match NOTATAG --always --abbrev=40 --dirty='*'
+
+branch:
+	git rev-parse --abbrev-ref HEAD
+
+version-file:
+	./sh/versionfile.sh
+
+current-version:
+	./sh/version.sh --current
+
+next-version:
+	./sh/version.sh
+
 git-check:
-	./git_check.sh
+	./sh/git_check.sh
 
 pre-commit:
 	pre-commit install
 	isort .
 
 pytest:
-	PYTHON=$(PYTHON) RESULT_FNAME=$(RESULT_FNAME) ./run_pytest.sh $(FILE)
+	PYTHON=$(PYTHON) RESULT_FNAME=$(RESULT_FNAME) ./sh/run_pytest.sh $(FILE)
 
 run-api:
 	API_SERVER_NAMESPACE=$(NS) $(PYTHON) -m app
@@ -120,10 +155,10 @@ coverage-report:
 	cd coverage/reports/html_report && open index.html
 
 stubgen:
-	PYTHON=$(PYTHON) FORCE=$(FORCE) ./stubgen.sh $(PKG)
+	PYTHON=$(PYTHON) FORCE=$(FORCE) ./sh/stubgen.sh $(PKG)
 
 allapps:
-	./findpy.sh \
+	./sh/findpy.sh \
 	| xargs grep '__name__ == "__main__"' \
 	| cut -d: -f1 \
 	| sed -e 's/^.\///' -e 's/\/__main__.py$$//' -e 's/.py$$//'

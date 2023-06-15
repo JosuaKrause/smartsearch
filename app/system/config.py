@@ -2,7 +2,7 @@ import json
 import os
 from typing import cast, TYPE_CHECKING, TypedDict
 
-from app.misc.env import envload_path
+from app.misc.env import envload_int, envload_path, envload_str
 from app.misc.io import open_read, open_write
 
 
@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
 Config = TypedDict('Config', {
     "db": 'DBConfig',
+    "opencage": str,
+    "appsecret": str,
 })
 
 
@@ -39,7 +41,20 @@ def config_template() -> Config:
     }
     return {
         "db": default_conn.copy(),
+        "opencage": "INVALID",
+        "appsecret": "INVALID",
     }
+
+
+def create_config_and_err(config_path: str) -> None:
+    with open_write(config_path, text=True) as fout:
+        print(
+            json.dumps(config_template(), indent=4, sort_keys=True),
+            file=fout)
+    raise ValueError(
+        "config file missing. "
+        f"new file was created at '{config_path}'. "
+        "please correct values in file and run again")
 
 
 def get_config() -> Config:
@@ -48,14 +63,29 @@ def get_config() -> Config:
     if CONFIG is not None:
         return CONFIG
     config_path = get_config_path()
-    if not os.path.exists(config_path):
-        with open_write(config_path, text=True) as fout:
-            print(
-                json.dumps(config_template(), indent=4, sort_keys=True),
-                file=fout)
-        raise ValueError(
-            f"config file missing. new file was created at '{config_path}'. "
-            "please correct values in file and run again")
-    with open_read(config_path, text=True) as fin:
-        CONFIG = cast(Config, json.load(fin))
+    if config_path == "-":
+        print("loading config from env")
+        CONFIG = {
+            "db": {
+                "dbname": envload_str("LOGIN_DB_NAME"),
+                "dialect": envload_str(
+                    "LOGIN_DB_DIALECT", default="postgresql"),
+                "host": envload_str("LOGIN_DB_HOST"),
+                "port": envload_int("LOGIN_DB_PORT", default=5432),
+                "user": envload_str("LOGIN_DB_USERNAME"),
+                "passwd": envload_str("LOGIN_DB_PASSWORD"),
+                "schema": envload_str("LOGIN_DB_SCHEMA", default="public"),
+            },
+            "opencage": envload_str("OPENCAGE_API"),
+            "appsecret": envload_str("APP_SECRET"),
+        }
+    else:
+        print(f"loading config file: {config_path}")
+        if not os.path.exists(config_path):
+            create_config_and_err(config_path)
+        with open_read(config_path, text=True) as fin:
+            config = cast(Config, json.load(fin))
+            if not config:
+                create_config_and_err(config_path)
+            CONFIG = config
     return CONFIG

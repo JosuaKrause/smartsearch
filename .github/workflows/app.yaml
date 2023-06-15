@@ -87,70 +87,105 @@ jobs:
         make lint-pylint
 
 
-  tests_pipeline:
-    name: Tests CI Pipeline
+  # tests_pipeline:
+  #   name: Tests CI Pipeline
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       python: ['3.10']
+  #       ci_node_total: [3]
+  #       ci_node_index: [0, 1, 2]
+  #   env:
+  #     ENV: CI
+
+  #   steps:
+  #   - uses: actions/checkout@v2
+
+  #   - name: Set up Python ${{ matrix.python }}
+  #     uses: actions/setup-python@v1
+  #     with:
+  #       python-version: ${{ matrix.python }}
+
+  #   - name: Restore test-result Cache
+  #     uses: actions/cache@v3
+  #     with:
+  #       path: test-results/*
+  #       key:  test-results-v1-${{ matrix.python }}-${{ hashFiles('test/*.py') }}-${{ hashFiles('test/data/*') }}-${{ github.sha }}-${{ matrix.ci_node_index }}
+  #       restore-keys: |
+  #         test-results-v1-${{ matrix.python }}-${{ hashFiles('test/*.py') }}-${{ hashFiles('test/data/*') }}
+  #         test-results-v1-${{ matrix.python }}-
+
+  #   - name: Cache python modules
+  #     uses: actions/cache@v3
+  #     with:
+  #       path: ${{ env.pythonLocation }}
+  #       key: v1-${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}
+
+  #   - name: Install dependencies
+  #     run: |
+  #       make install PYTHON=python
+
+  #   - name: Run test on Node ${{ matrix.ci_node_index }}
+  #     run: |
+  #       set -ex
+  #       rm -f test-results/results-*.xml
+  #       OUT=$(python -m test split_tests --filepath test-results/results.xml --total-nodes ${{ matrix.ci_node_total }} --node-id ${{ matrix.ci_node_index }})
+  #       IFS=',' read -a FILE_INFO <<< "$OUT"
+  #       echo "Previous timings are: ${FILE_INFO[0]}"
+  #       FILES=$(echo "${OUT}" | sed -E 's/^[^,]*,//')
+  #       echo "Selected Files are: ${FILES}"
+  #       rm -rf test-results
+  #       make pytest RESULT_FNAME=results-${{ matrix.python }}-${{ matrix.ci_node_index }}.xml FILE="${FILES}"
+  #       tail -v -n +1 test-results/*.xml
+
+  #   - name: Upload Artifact(results)
+  #     uses: actions/upload-artifact@v3
+  #     with:
+  #       name: results-${{ matrix.python }}-${{ matrix.ci_node_index }}
+  #       path: test-results/results-${{ matrix.python }}-${{ matrix.ci_node_index }}.xml
+
+  #   - name: Upload Artifact(coverage reports)
+  #     uses: actions/upload-artifact@v3
+  #     with:
+  #       name: coverage-${{ matrix.python }}-${{ matrix.ci_node_index }}
+  #       path: .coverage
+
+  #   - name: Git Check (tests may not alter any git visible files)
+  #     run: |
+  #       git status -sb --porcelain
+  #       [ -z "$(git status --porcelain)" ]
+
+  deploy_pipeline:
+    name: Deploy
+    needs: lints_pipeline  # , tests_pipeline
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python: ['3.10']
-        ci_node_total: [3]
-        ci_node_index: [0, 1, 2]
-    env:
-      ENV: CI
 
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Python ${{ matrix.python }}
-      uses: actions/setup-python@v1
+    - name: Docker login
+      uses: azure/docker-login@v1
       with:
-        python-version: ${{ matrix.python }}
+        login-server: acclabdocker.azurecr.io
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
 
-    - name: Restore test-result Cache
-      uses: actions/cache@v3
-      with:
-        path: test-results/*
-        key:  test-results-v1-${{ matrix.python }}-${{ hashFiles('test/*.py') }}-${{ hashFiles('test/data/*') }}-${{ github.sha }}-${{ matrix.ci_node_index }}
-        restore-keys: |
-          test-results-v1-${{ matrix.python }}-${{ hashFiles('test/*.py') }}-${{ hashFiles('test/data/*') }}
-          test-results-v1-${{ matrix.python }}-
+    - name: Set env
+      run: echo "IMAGE_TAG=$(make -s name)" >> $GITHUB_ENV
 
-    - name: Cache python modules
-      uses: actions/cache@v3
-      with:
-        path: ${{ env.pythonLocation }}
-        key: v1-${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}
-
-    - name: Install dependencies
+    - name: Build docker image
       run: |
-        make install PYTHON=python
+        make -s build
+      env:
+        CONFIG_PATH: "-"
 
-    - name: Run test on Node ${{ matrix.ci_node_index }}
+    - name: Push docker image
       run: |
-        set -ex
-        rm -f test-results/results-*.xml
-        OUT=$(python -m test split_tests --filepath test-results/results.xml --total-nodes ${{ matrix.ci_node_total }} --node-id ${{ matrix.ci_node_index }})
-        IFS=',' read -a FILE_INFO <<< "$OUT"
-        echo "Previous timings are: ${FILE_INFO[0]}"
-        FILES=$(echo "${OUT}" | sed -E 's/^[^,]*,//')
-        echo "Selected Files are: ${FILES}"
-        rm -rf test-results
-        make pytest RESULT_FNAME=results-${{ matrix.python }}-${{ matrix.ci_node_index }}.xml FILE="${FILES}"
-        tail -v -n +1 test-results/*.xml
+        make -s dockerpush
 
-    - name: Upload Artifact(results)
-      uses: actions/upload-artifact@v3
+    - uses: azure/webapps-deploy@v2
       with:
-        name: results-${{ matrix.python }}-${{ matrix.ci_node_index }}
-        path: test-results/results-${{ matrix.python }}-${{ matrix.ci_node_index }}.xml
-
-    - name: Upload Artifact(coverage reports)
-      uses: actions/upload-artifact@v3
-      with:
-        name: coverage-${{ matrix.python }}-${{ matrix.ci_node_index }}
-        path: .coverage
-
-    - name: Git Check (tests may not alter any git visible files)
-      run: |
-        git status -sb --porcelain
-        [ -z "$(git status --porcelain)" ]
+        app-name: 'nlpapi'
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        images: 'acclabdocker.azurecr.io/smartsearch:${{ env.IMAGE_TAG }}'

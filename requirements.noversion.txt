@@ -1,10 +1,9 @@
-annoy
+backoff
 evaluate
 fastcluster
 flake8
 flake8-commas
 flake8-isort
-https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.2.0/en_core_web_sm-2.2.0.tar.gz
 huggingface-hub
 ipywidgets
 jupyter
@@ -16,12 +15,14 @@ matplotlib-inline
 mypy
 mypy-extensions
 numpy
+opencage
 pandas
 Pillow
 pre-commit
-psycopg2
+psycopg2-binary
 pyarrow
 pycodestyle
+pyjwt
 pylint
 pytest
 pytest-cov
