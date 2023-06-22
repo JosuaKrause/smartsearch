@@ -62,12 +62,12 @@ that no unwanted (or uncommit) files will be included in the image.
 
 If you just want to run the API locally start the container via:
 ```
-docker run -d -p 8080:8080 -t "smartsearch-$(make -s name)"
+docker run -d -p 8080:8080 -t "smartsearch:$(make -s name)"
 ```
 
 Test the connection via:
 ```
-curl -X POST --json '{"input": "Is London really a place?"}' http://localhost:8080/api/locations
+curl -X POST --json '{"token": <user token>, "input": "Is London really a place?"}' http://localhost:8080/api/locations
 ```
 
 ## Push docker image
