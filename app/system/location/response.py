@@ -17,11 +17,37 @@ GeoStatus = Literal[
 STATUS_ORDER: list[GeoStatus] = [
     "ratelimit",
     "invalid",
+    "ok",
     "cache_miss",
     "cache_never",
     "cache_hit",
-    "ok",
 ]
+
+
+DbStatus = Literal[
+    "cache_hit",
+    "cache_miss",
+    "invalid",
+    "ratelimit",
+]
+
+
+StatusCount = TypedDict('StatusCount', {
+    "cache_miss": int,
+    "cache_hit": int,
+    "invalid": int,
+    "ratelimit": int,
+})
+
+
+STATUS_MAP: dict[GeoStatus, DbStatus] = {
+    "ratelimit": "ratelimit",
+    "invalid": "invalid",
+    "cache_miss": "cache_miss",
+    "cache_never": "cache_miss",
+    "cache_hit": "cache_hit",
+    "ok": "cache_miss",
+}
 
 
 GeoResponse = TypedDict('GeoResponse', {

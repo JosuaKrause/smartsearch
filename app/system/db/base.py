@@ -92,6 +92,17 @@ class LocationEntries(Base):  # pylint: disable=too-few-public-methods
         sa.Double, nullable=False)
 
 
+class LocationUsers(Base):  # pylint: disable=too-few-public-methods
+    __tablename__ = "location_users"
+
+    userid: sa.Column[sa.Uuid] = sa.Column(  # type: ignore
+        sa.Uuid, nullable=False, unique=True, primary_key=True)
+    cache_miss = sa.Column(sa.Integer, nullable=False, default=0)
+    cache_hit = sa.Column(sa.Integer, nullable=False, default=0)
+    invalid = sa.Column(sa.Integer, nullable=False, default=0)
+    ratelimit = sa.Column(sa.Integer, nullable=False, default=0)
+
+
 class ModelsTable(Base):  # pylint: disable=too-few-public-methods
     __tablename__ = "models"
 

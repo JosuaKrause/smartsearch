@@ -18,3 +18,11 @@ CREATE TABLE IF NOT EXISTS location_entries
     confidence DOUBLE PRECISION NOT NULL,
     CONSTRAINT location_entries_pkey PRIMARY KEY (location_id, pos)
 );
+CREATE TABLE IF NOT EXISTS location_users
+(
+    userid uuid UNIQUE NOT NULL PRIMARY KEY,
+    cache_miss integer NOT NULL DEFAULT 0,
+    cache_hit integer NOT NULL DEFAULT 0,
+    invalid integer NOT NULL DEFAULT 0,
+    ratelimit integer NOT NULL DEFAULT 0
+);
