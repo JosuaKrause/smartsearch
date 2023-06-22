@@ -1,6 +1,7 @@
 # pylint: disable=unused-argument
 import sys
 import threading
+import uuid
 
 from quick_server import create_server, PreventDefaultResponse, QuickServer
 from quick_server import QuickServerRequestHandler as QSRH
@@ -70,10 +71,11 @@ def setup(
     db = DBConnector(config["db"])
     ops = get_ops("db", config)
 
-    def verify_token(token: str) -> None:
-        if is_valid_token(config, token):
-            return
-        raise PreventDefaultResponse(401, "invalid token provided")
+    def verify_token(token: str) -> uuid.UUID:
+        user = is_valid_token(config, token)
+        if user is None:
+            raise PreventDefaultResponse(401, "invalid token provided")
+        return user
 
     # *** misc ***
 
@@ -107,7 +109,7 @@ def setup(
     @server.json_post(f"{prefix}/locations")
     def _post_locations(_req: QSRH, rargs: ReqArgs) -> GeoOutput:
         args = rargs["post"]
-        verify_token(args["token"])
+        user = verify_token(args["token"])
         obj: GeoQuery = {
             "input": args["input"],
             "return_input": args.get("return_input", False),
@@ -115,7 +117,7 @@ def setup(
             "strategy": args.get("strategy", "top"),
             "language": args.get("language", "en"),
         }
-        return extract_locations(db, obj)
+        return extract_locations(db, obj, user)
 
     return server, prefix
 

@@ -1,7 +1,8 @@
 import collections
+from uuid import UUID
 
 from app.misc.context import get_context
-from app.system.db.base import LocationCache, LocationEntries
+from app.system.db.base import LocationCache, LocationEntries, LocationUsers
 from app.system.db.db import DBConnector
 from app.system.location.cache import read_geo_cache, write_geo_cache
 from app.system.location.forwardgeo import geo_result
@@ -11,13 +12,16 @@ from app.system.location.response import (
     GeoQuery,
     GeoResult,
     GeoStatus,
+    STATUS_MAP,
     STATUS_ORDER,
+    StatusCount,
 )
 from app.system.location.spacy import get_locations, get_spacy
 from app.system.location.strategy import get_strategy
 
 
-def extract_locations(db: DBConnector, geo_query: GeoQuery) -> GeoOutput:
+def extract_locations(
+        db: DBConnector, geo_query: GeoQuery, user: UUID) -> GeoOutput:
     nlp = get_spacy(geo_query["language"])
     strategy = get_strategy(geo_query["strategy"])
     rt_context = geo_query["return_context"]
@@ -44,14 +48,21 @@ def extract_locations(db: DBConnector, geo_query: GeoQuery) -> GeoOutput:
     })
 
     country_count: collections.Counter[str] = collections.Counter()
-    worst_status: GeoStatus = "ok"
+    worst_status: GeoStatus = STATUS_ORDER[-1]
     worst_ix = STATUS_ORDER.index(worst_status)
+    status_count: StatusCount = {
+        "cache_hit": 0,
+        "cache_miss": 0,
+        "invalid": 0,
+        "ratelimit": 0,
+    }
     entity_map: dict[str, EntityInfo] = {}
     for entity in entities:
         query, start, stop = entity
         info = entity_map.get(query, None)
         if info is None:
             loc, status = get_resp(query)
+            status_count[STATUS_MAP[status]] += 1
             status_ix = STATUS_ORDER.index(status)
             if status_ix < worst_ix:
                 worst_ix = status_ix
@@ -77,6 +88,27 @@ def extract_locations(db: DBConnector, geo_query: GeoQuery) -> GeoOutput:
         entity_map.values(),
         key=lambda entity: entity["count"],
         reverse=True)
+    with db.get_session() as session:
+        stmt = db.upsert(LocationUsers).values(
+            userid=user,
+            cache_miss=status_count["cache_miss"],
+            cache_hit=status_count["cache_hit"],
+            invalid=status_count["invalid"],
+            ratelimit=status_count["ratelimit"],
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[LocationUsers.userid],
+            set_={
+                LocationUsers.cache_miss:
+                    LocationUsers.cache_miss + status_count["cache_miss"],
+                LocationUsers.cache_hit:
+                    LocationUsers.cache_hit + status_count["cache_hit"],
+                LocationUsers.invalid:
+                    LocationUsers.invalid + status_count["invalid"],
+                LocationUsers.ratelimit:
+                    LocationUsers.ratelimit + status_count["ratelimit"],
+            })
+        session.execute(stmt)
     return {
         "status": worst_status,
         "country": likely_country[0][0] if likely_country else "NUL",
