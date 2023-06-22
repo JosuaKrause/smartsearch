@@ -118,4 +118,4 @@ def extract_locations(
 
 
 def create_location_tables(db: DBConnector) -> None:
-    db.create_tables([LocationCache, LocationEntries])
+    db.create_tables([LocationCache, LocationEntries, LocationUsers])
