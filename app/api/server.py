@@ -23,6 +23,7 @@ from app.system.ops.ops import get_ops
 
 
 MAX_RESPONSE = 1024 * 100  # 100kB  # rough size
+MAX_INPUT_LENGTH = 1024 * 1024 * 10  # 10MB
 MAX_LINKS = 20
 
 
@@ -109,6 +110,9 @@ def setup(
     @server.json_post(f"{prefix}/locations")
     def _post_locations(_req: QSRH, rargs: ReqArgs) -> GeoOutput:
         args = rargs["post"]
+        if len(args["input"]) > MAX_INPUT_LENGTH:
+            raise PreventDefaultResponse(
+                413, f"input length exceeds {MAX_INPUT_LENGTH} bytes")
         user = verify_token(args["token"])
         obj: GeoQuery = {
             "input": args["input"],
