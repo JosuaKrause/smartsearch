@@ -16,23 +16,26 @@ from app.system.location.response import (
     STATUS_ORDER,
     StatusCount,
 )
-from app.system.location.spacy import get_locations, get_spacy
+from app.system.location.spacy import get_locations
 from app.system.location.strategy import get_strategy
+from app.system.spacy import create_length_counter, get_spacy
 
 
 def extract_locations(
         db: DBConnector, geo_query: GeoQuery, user: UUID) -> GeoOutput:
-    nlp = get_spacy(geo_query["language"])
     strategy = get_strategy(geo_query["strategy"])
     rt_context = geo_query["return_context"]
     rt_input = geo_query["return_input"]
     input_text = geo_query["input"]
+    lnc, lnr = create_length_counter()
 
-    entities = [
-        (entity.strip(), start, stop)
-        for (entity, start, stop)
-        in get_locations(nlp, input_text)
-    ]
+    with get_spacy(geo_query["language"]) as nlp:
+        entities = [
+            (entity.strip(), start, stop)
+            for (entity, start, stop)
+            in get_locations(nlp, input_text, lnc)
+        ]
+
     query_list = [entity for entity, _, _ in entities]
     queries = set(query_list)
     cache_res = read_geo_cache(db, queries)
@@ -59,6 +62,9 @@ def extract_locations(
     entity_map: dict[str, EntityInfo] = {}
     for entity in entities:
         query, start, stop = entity
+        # if query != input_text[start:stop]:
+        #     raise ValueError(
+        #         f"oops: '{query}' {start} {stop} '{input_text[start:stop]}'")
         info = entity_map.get(query, None)
         if info is None:
             loc, status = get_resp(query)
@@ -89,12 +95,15 @@ def extract_locations(
         key=lambda entity: entity["count"],
         reverse=True)
     with db.get_session() as session:
+        total_length = lnr()
         stmt = db.upsert(LocationUsers).values(
             userid=user,
             cache_miss=status_count["cache_miss"],
             cache_hit=status_count["cache_hit"],
             invalid=status_count["invalid"],
             ratelimit=status_count["ratelimit"],
+            location_count=1,
+            location_length=total_length,
         )
         stmt = stmt.on_conflict_do_update(
             index_elements=[LocationUsers.userid],
@@ -107,6 +116,10 @@ def extract_locations(
                     LocationUsers.invalid + status_count["invalid"],
                 LocationUsers.ratelimit:
                     LocationUsers.ratelimit + status_count["ratelimit"],
+                LocationUsers.location_count:
+                    LocationUsers.location_count + 1,
+                LocationUsers.location_length:
+                    LocationUsers.location_length + total_length,
             })
         session.execute(stmt)
     return {

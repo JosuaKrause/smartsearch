@@ -4,3 +4,4 @@ data/
 notebooks/
 test-results/
 config.json
+test*.json
